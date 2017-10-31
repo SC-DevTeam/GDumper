@@ -167,9 +167,9 @@ elif mode == "dump":
     os.makedirs(path)
 
 print("Killing " + package_name)
-runCmd("adb -s LGH85029b804c6 shell am force-stop " + package_name)
+runCmd("adb shell am force-stop " + package_name)
 print("Starting " + package_name)
-runCmd("adb -s LGH85029b804c6 shell am start -n " + package_name + "/" + package_name + ".GameApp")
+runCmd("adb shell am start -n " + package_name + "/" + package_name + ".GameApp")
 
 process = frida.get_usb_device().attach(package_name)
 print("Frida attached.")

@@ -6,9 +6,6 @@ const xp4 = 0x33C2F6; // possible rc4
 const xp5 = 0x324980; // udp send 1 (subsequent packet)
 const xp6 = 0x3248C0; // udp send 2 (used only on first packed)
 
-
-inject();
-
 function ba2hex(bufArray) {
     var uint8arr = new Uint8Array(bufArray);
     if (!uint8arr) {
@@ -25,6 +22,8 @@ function ba2hex(bufArray) {
     return hexStr.toUpperCase();
 }
 
+inject();
+
 function inject() {
     Process.enumerateModules({
         onMatch: function (module) {
@@ -33,10 +32,13 @@ function inject() {
                 var pt1 = ptr(parseInt(base) + 1 + xp5);
                 var pt2 = ptr(parseInt(base) + 1 + xp6);
 
+                var sessionId = null;
+
                 Interceptor.attach(pt1, {
                     onEnter: function (args) {
                         console.log("UDP SEND 1");
-                        console.log(Memory.readByteArray(ptr(parseInt(args[0]) + 1410), 64));
+                        var p = ba2hex(Memory.readByteArray(ptr(parseInt(args[0]) + 1410), 64));
+                        console.log(p);
                     },
                     onLeave: function (retval) {
                     }
@@ -44,14 +46,24 @@ function inject() {
                 Interceptor.attach(pt2, {
                     onEnter: function (args) {
                         console.log("UDP SEND 2");
-                        console.log(Memory.readByteArray(ptr(parseInt(args[0]) + 1410), 64));
+                        var p = ba2hex(Memory.readByteArray(ptr(parseInt(args[0]) + 1410), 64));
+                        if (sessionId === null) {
+                            sessionId = p.substring(0, 10);
+                        }
+                        console.log(p);
                     },
                     onLeave: function (retval) {
                     }
                 });
                 Interceptor.attach(Module.findExportByName("libg.so", "sendto"), {
                     onEnter: function (args) {
-                        console.log(Memory.readByteArray(args[1], 64));
+                        if (sessionId !== null) {
+                            var p = ba2hex(Memory.readByteArray(args[1], 64));
+                            if (p.startsWith(sessionId)) {
+                                console.log("SENDTO");
+                                console.log(p);
+                            }
+                        }
                     },
                     onLeave: function (retval) {
                     }
