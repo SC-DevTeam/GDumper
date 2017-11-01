@@ -110,12 +110,28 @@ function inject() {
                         if (sessionId !== null) {
                             var p = ba2hex(Memory.readByteArray(args[1], parseInt(args[2])));
                             if (p.startsWith(sessionId)) {
-                                console.log("SENDTO");
+                                console.log("SEND");
                                 packetize(p);
                             }
                         }
                     },
                     onLeave: function (retval) {
+                    }
+                });
+
+                var recvPtr;
+                Interceptor.attach(Module.findExportByName("libg.so", "recvfrom"), {
+                    onEnter: function (args) {
+                        recvPtr = args[1];
+                    },
+                    onLeave: function (retval) {
+                        if (sessionId !== null) {
+                            var p = ba2hex(Memory.readByteArray(recvPtr, parseInt(retval)));
+                            if (p.startsWith(sessionId)) {
+                                console.log("RECV");
+                                packetize(p);
+                            }
+                        }
                     }
                 });
             }
