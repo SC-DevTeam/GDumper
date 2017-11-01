@@ -25,17 +25,17 @@ function ba2hex(bufArray) {
 function packetize(payload) {
     var packet = {
         sessionKey: payload.substring(0, 20),
-        tickUpdate: null,
+        ack: null,
         contentMessage: null
     };
     payload = payload.substring(20);
     while (payload.length !== 0) {
-        if (packet.tickUpdate === null) {
-            var tickUpdate = parseInt(payload.substring(0, 2));
-            packet.tickUpdate = {};
+        if (packet.ack === null) {
+            var ack = parseInt(payload.substring(0, 2));
+            packet.ack = {};
             payload = subs(payload, 2);
-            if (tickUpdate > 0) {
-                packet.tickUpdate.tick = parseInt("0x" + payload.substring(0, 2));
+            if (ack > 0) {
+                packet.ack.ack = parseInt("0x" + payload.substring(0, 2));
                 payload = subs(payload, 2);
             }
         } else if (packet.contentMessage === null) {
@@ -43,7 +43,7 @@ function packetize(payload) {
             packet.contentMessage = {};
             payload = subs(payload, 2);
             if (msg > 0) {
-                packet.contentMessage.tick = parseInt("0x" + payload.substring(0, 2));
+                packet.contentMessage.ack = parseInt("0x" + payload.substring(0, 2));
                 payload = subs(payload, 2);
 
                 packet.contentMessage.msgId = parseInt("0x" + payload.substring(0, 4));
