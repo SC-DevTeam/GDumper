@@ -22,7 +22,57 @@ function ba2hex(bufArray) {
     return hexStr.toUpperCase();
 }
 
-inject();
+function packetize(payload) {
+    var packet = {
+        sessionKey: payload.substring(0, 20),
+        tickUpdate: null,
+        contentMessage: null
+    };
+    payload = payload.substring(20);
+    while (payload.length !== 0) {
+        if (packet.tickUpdate === null) {
+            var tickUpdate = parseInt(payload.substring(0, 2));
+            packet.tickUpdate = {};
+            payload = subs(payload, 2);
+            if (tickUpdate > 0) {
+                packet.tickUpdate.tick = parseInt("0x" + payload.substring(0, 2));
+                payload = subs(payload, 2);
+            }
+        } else if (packet.contentMessage === null) {
+            var msg = parseInt(payload.substring(0, 2));
+            packet.contentMessage = {};
+            payload = subs(payload, 2);
+            if (msg > 0) {
+                packet.contentMessage.tick = parseInt("0x" + payload.substring(0, 2));
+                payload = subs(payload, 2);
+
+                packet.contentMessage.msgId = parseInt("0x" + payload.substring(0, 4));
+                payload = subs(payload, 4);
+
+                if (payload.length > 0) {
+                    msg = parseInt(payload.substring(0, 2));
+                    payload = subs(payload, 2);
+                    if (msg > 0) {
+                        var encMsgLen = parseInt("0x" + payload.substring(0, 2));
+                        payload = subs(payload, 2);
+                        packet.contentMessage.encryptedPayload =
+                            payload.substring(0, encMsgLen * 2);
+                        payload = subs(payload, encMsgLen * 2);
+                    }
+                }
+            }
+        } else {
+            packet.extraBytes = payload;
+            payload = subs(payload, payload.length);
+        }
+    }
+
+    console.log(JSON.stringify(packet));
+}
+
+function subs(str, start) {
+    return str.substring(start);
+}
 
 function inject() {
     Process.enumerateModules({
@@ -58,10 +108,10 @@ function inject() {
                 Interceptor.attach(Module.findExportByName("libg.so", "sendto"), {
                     onEnter: function (args) {
                         if (sessionId !== null) {
-                            var p = ba2hex(Memory.readByteArray(args[1], 64));
+                            var p = ba2hex(Memory.readByteArray(args[1], parseInt(args[2])));
                             if (p.startsWith(sessionId)) {
                                 console.log("SENDTO");
-                                console.log(p);
+                                packetize(p);
                             }
                         }
                     },
@@ -74,3 +124,5 @@ function inject() {
         }
     });
 }
+
+inject();
